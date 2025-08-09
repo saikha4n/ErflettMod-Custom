@@ -1,0 +1,65 @@
+package net.mcreator.erflettmod.block;
+
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TemporaryCraftingTableBlock extends Block {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Erflettmod");
+
+    public TemporaryCraftingTableBlock(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            LOGGER.info("=== DEBUG: Starting menu creation ===");
+            
+            try {
+                ContainerLevelAccess access = ContainerLevelAccess.create(level, pos);
+                LOGGER.info("ContainerLevelAccess created: " + access);
+                
+                MenuProvider menuProvider = new SimpleMenuProvider(
+                    (id, inventory, p) -> {
+                        LOGGER.info("Creating CraftingMenu - ID: " + id + ", Player: " + p.getName().getString());
+                        
+                        CraftingMenu menu = new CraftingMenu(id, inventory, access);
+                        LOGGER.info("CraftingMenu created successfully: " + menu);
+                        
+                        return menu;
+                    },
+                    Component.literal("Debug Crafting Table")
+                );
+                LOGGER.info("MenuProvider created: " + menuProvider);
+                
+                LOGGER.info("Opening menu...");
+                serverPlayer.openMenu(menuProvider);
+                LOGGER.info("Menu opened successfully");
+                
+            } catch (Exception e) {
+                LOGGER.error("=== ERROR in menu creation ===", e);
+                e.printStackTrace();
+                return InteractionResult.FAIL;
+            }
+        }
+        
+        return InteractionResult.CONSUME;
+    }
+}
